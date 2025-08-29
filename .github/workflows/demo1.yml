@@ -1,21 +1,21 @@
-name: Security and Analysis Pipeline
+name: Echo Pipeline
 
 on:
   push:
-    branches: [ main ]  # This triggers the workflow on pushes to the main branch.
+    branches:
+      - main
 
 jobs:
-  build-and-scan:
-    runs-on: ubuntu-latest  # The environment for running the job.
-
+  echo-job:
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4  # Checks out your repository code.
+      - name: Echo Hello
+        run: echo "Hello, GitHub Actions!"
 
-      - name: Run echo command
-        run: echo "Hello from GitHub Actions!"
+      - name: Echo Current Date
+        run: echo "Today's date is $(date)"
 
-      - name: SonarQube Scan
-        uses: SonarSource/sonarcloud-github-action@v2
-        with:
-          sonar-token: ${{ secrets.SONAR_TOKEN }}  # Make sure you've stored this token in your repo’s secrets.
+      - name: Echo Working Directory
+        run: echo "Current working directory: $(pwd)"
+
+      - name: Echo List Files
