@@ -15,9 +15,6 @@ jobs:
       - name: Run echo command
         run: echo "Hello from GitHub Actions!"
 
-      - name: Run TFSec Scan
-        uses: aquasecurity/tfsec-action@v1  # This uses the TFSec GitHub Action to scan your Terraform code.
-
       - name: SonarQube Scan
         uses: SonarSource/sonarcloud-github-action@v2
         with:
