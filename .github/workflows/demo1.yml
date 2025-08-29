@@ -1,0 +1,24 @@
+name: Security and Analysis Pipeline
+
+on:
+  push:
+    branches: [ main ]  # This triggers the workflow on pushes to the main branch.
+
+jobs:
+  build-and-scan:
+    runs-on: ubuntu-latest  # The environment for running the job.
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4  # Checks out your repository code.
+
+      - name: Run echo command
+        run: echo "Hello from GitHub Actions!"
+
+      - name: Run TFSec Scan
+        uses: aquasecurity/tfsec-action@v1  # This uses the TFSec GitHub Action to scan your Terraform code.
+
+      - name: SonarQube Scan
+        uses: SonarSource/sonarcloud-github-action@v2
+        with:
+          sonar-token: ${{ secrets.SONAR_TOKEN }}  # Make sure you've stored this token in your repo’s secrets.
