@@ -11,14 +11,3 @@ jobs:
     steps:
       - name: Echo Hello
         run: echo "Hello, GitHub Actions!"
-
-      - name: Echo Current Date
-        run: echo "Today's date is $(date)"
-
-      - name: Echo Working Directory
-        run: echo "Current working directory: $(pwd)"
-
-      - name: List Files
-        run: |
-          echo "Listing files:"
-          ls -la
