@@ -41,12 +41,12 @@ jobs:
             --set controller.nodeSelector."kubernetes\.io/os"=linux \
             --set defaultBackend.nodeSelector."kubernetes\.io/os"=linux
 
-      # 5. Create TLS Secret from cert directory
+      # 5. Create TLS Secret from certs directory
       - name: Create TLS Secret
         run: |
           kubectl create secret tls skhan-tech-tls \
-            --cert=cert/skhan.tech.crt \
-            --key=cert/skhan.tech.key \
+            --cert=certs/skhan.tech.crt \
+            --key=certs/skhan.tech.key \
             --namespace default \
             --dry-run=client -o yaml | kubectl apply -f -
 
