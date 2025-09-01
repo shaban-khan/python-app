@@ -4,28 +4,28 @@ on:
   push:
     branches:
       - main
-      - develop
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
+      # 1. Checkout the repository
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # Azure Login
+      # 2. Azure login
       - name: Azure Login
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      # Get AKS credentials
+      # 3. Get AKS credentials
       - name: Get AKS credentials
         run: |
           az aks get-credentials --resource-group "rg-skhan-demo-aks" --name "skhanaks" --admin
 
-      # Install NGINX Ingress Controller
+      # 4. Install NGINX Ingress Controller
       - name: Install NGINX Ingress Controller
         run: |
           kubectl create namespace ingress-nginx --dry-run=client -o yaml | kubectl apply -f -
@@ -37,21 +37,25 @@ jobs:
             --set controller.nodeSelector."kubernetes\.io/os"=linux \
             --set defaultBackend.nodeSelector."kubernetes\.io/os"=linux
 
-      # Install cert-manager
+      # 5. Install cert-manager
       - name: Install cert-manager
         run: |
           kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.14.4/cert-manager.yaml
+          echo "Waiting for cert-manager pods to be ready..."
+          kubectl rollout status deployment cert-manager -n cert-manager --timeout=120s
+          kubectl rollout status deployment cert-manager-cainjector -n cert-manager --timeout=120s
+          kubectl rollout status deployment cert-manager-webhook -n cert-manager --timeout=120s
 
-      # Deploy App
+      # 6. Apply ClusterIssuer
+      - name: Apply ClusterIssuer
+        run: kubectl apply -f k8s/cluster-issuer.yaml
+
+      # 7. Deploy Application (Deployment + Service)
       - name: Deploy App
         run: |
-          kubectl apply -f manifest/deploy-app.yaml
-          kubectl apply -f manifest/svc-app.yaml
+          kubectl apply -f k8s/deployment.yaml
+          kubectl apply -f k8s/service.yaml
 
-      # Apply ClusterIssuer
-      - name: Apply ClusterIssuer
-        run: kubectl apply -f manifest/cluster-issuer.yaml
-
-      # Apply Ingress
+      # 8. Apply Ingress with TLS
       - name: Apply Ingress
-        run: kubectl apply -f manifest/ingress.yaml
+        run: kubectl apply -f k8s/ingress.yaml
