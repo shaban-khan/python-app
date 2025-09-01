@@ -4,8 +4,8 @@ metadata:
   name: letsencrypt-dev
 spec:
   acme:
-    server: https://acme-v02.api.letsencrypt.org/directory
-    email: khan.shaban@outlook.com  # change this
+    server: https://acme-staging-v02.api.letsencrypt.org/directory
+    email: khan.shaban@outlook.com
     privateKeySecretRef:
       name: letsencrypt-dev
     solvers:
