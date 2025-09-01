@@ -23,10 +23,7 @@ jobs:
       # Get AKS credentials
       - name: Get AKS credentials
         run: |
-          az aks get-credentials \
-            --resource-group ${{ secrets.AZURE_RG }} \
-            --name ${{ secrets.AKS_NAME }} \
-            --overwrite-existing
+          az aks get-credentials --resource-group "rg-skhan-demo-aks" --name "skhanaks"
 
       # Install NGINX Ingress Controller
       - name: Install NGINX Ingress Controller
