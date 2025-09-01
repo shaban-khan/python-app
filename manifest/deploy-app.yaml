@@ -16,4 +16,4 @@ spec:
       - name: skhan-app
         image: acrskhan.azurecr.io/skhan-app:1.0
         ports:
-        - containerPort: 5000
+        - containerPort: 80

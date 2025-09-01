@@ -1,0 +1,23 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: skhan-ingress
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    cert-manager.io/cluster-issuer: "letsencrypt-dev"
+spec:
+  tls:
+  - hosts:
+    - skhan.tech
+    secretName: skhan-tech-tls
+  rules:
+  - host: skhan.tech
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: skhan-svc
+            port:
+              number: 80

@@ -1,0 +1,60 @@
+name: Deploy to AKS
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # Azure Login
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      # Get AKS credentials
+      - name: Get AKS credentials
+        run: |
+          az aks get-credentials \
+            --resource-group ${{ secrets.AZURE_RG }} \
+            --name ${{ secrets.AKS_NAME }} \
+            --overwrite-existing
+
+      # Install NGINX Ingress Controller
+      - name: Install NGINX Ingress Controller
+        run: |
+          kubectl create namespace ingress-nginx --dry-run=client -o yaml | kubectl apply -f -
+          helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+          helm repo update
+          helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx \
+            --namespace ingress-nginx \
+            --set controller.replicaCount=2 \
+            --set controller.nodeSelector."kubernetes\.io/os"=linux \
+            --set defaultBackend.nodeSelector."kubernetes\.io/os"=linux
+
+      # Install cert-manager
+      - name: Install cert-manager
+        run: |
+          kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.14.4/cert-manager.yaml
+
+      # Deploy App
+      - name: Deploy App
+        run: |
+          kubectl apply -f manifest/deploy-app.yaml
+          kubectl apply -f manifest/svc-app.yaml
+
+      # Apply ClusterIssuer
+      - name: Apply ClusterIssuer
+        run: kubectl apply -f manifest/cluster-issuer.yaml
+
+      # Apply Ingress
+      - name: Apply Ingress
+        run: kubectl apply -f manifest/ingress.yaml

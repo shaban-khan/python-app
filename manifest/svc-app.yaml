@@ -3,10 +3,10 @@ kind: Service
 metadata:
   name: skhan-svc
 spec:
-  type: LoadBalancer
+  type: ClusterIP
   selector:
     app: skhan-app
   ports:
     - protocol: TCP
       port: 80
-      targetPort: 5000
+      targetPort: 80
