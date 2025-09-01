@@ -54,8 +54,8 @@ jobs:
       # 7. Deploy Application (Deployment + Service)
       - name: Deploy App
         run: |
-          kubectl apply -f manifest/deployment.yaml
-          kubectl apply -f manifest/service.yaml
+          kubectl apply -f manifest/deploy-app.yaml
+          kubectl apply -f manifest/svc-app.yaml
 
       # 8. Apply Ingress with TLS
       - name: Apply Ingress
