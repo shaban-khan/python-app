@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: skhan-app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: skhan-app
+  template:
+    metadata:
+      labels:
+        app: skhan-app
+    spec:
+      containers:
+      - name: skhan-app
+        image: acrskhan.azurecr.io/skhan-app:1.0
+        ports:
+        - containerPort: 5000

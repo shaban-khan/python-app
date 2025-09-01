@@ -26,3 +26,12 @@ jobs:
       run: |
         docker build -t acrskhan.azurecr.io/skhan-app:1.0 .
         docker push acrskhan.azurecr.io/skhan-app:1.0
+    - name: Set AKS context
+      run: |
+        az aks get-credentials --resource-group rg-skhan-demo-aks --name skhanaks --admin
+
+    - name: Deploy to AKS
+      run: |
+        kubectl apply -f deploy-app.yaml
+        kubectl apply -f svc-app.yaml
+
