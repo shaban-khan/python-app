@@ -2,6 +2,7 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: skhan-ingress
+  namespace: default
   annotations:
     kubernetes.io/ingress.class: nginx
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
@@ -18,6 +19,6 @@ spec:
         pathType: Prefix
         backend:
           service:
-            name: default-skhan-svc-80
+            name: default-skhan-svc-80   # ✅ matches the working Service
             port:
-              number: 80
+              number: 80                 # ✅ matches Service port
