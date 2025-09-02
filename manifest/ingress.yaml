@@ -18,6 +18,6 @@ spec:
         pathType: Prefix
         backend:
           service:
-            name: skhan-svc
+            name: default-skhan-svc-80
             port:
-              number: 5000
+              number: 80
