@@ -1,0 +1,5 @@
+replicaCount: 2
+
+image:
+  repository: acrskhan.azurecr.io/skhan-app
+  tag: 3.0

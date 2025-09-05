@@ -1,0 +1,5 @@
+apiVersion: v2
+name: skhan-app
+description: A Helm chart for deploying Flask app on AKS
+version: 0.1.0
+appVersion: "1.0"
