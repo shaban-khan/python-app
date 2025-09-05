@@ -7,7 +7,7 @@ app = Flask(__name__)
 def hello():
     app.logger.info("Serving Azure Application Gateway page")
     return '''
-    <h1> Azure Application Gateway </h1>
+    <h1> Azure Application Gateway 001 </h1>
     <img src="https://code.benco.io/icon-collection/azure-icons/Application-Gateways.svg" alt="Azure Icon" width="100" height="100">
     '''
 
