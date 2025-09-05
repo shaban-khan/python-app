@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - skhan-test01
 
 jobs:
   build-push-deploy:
