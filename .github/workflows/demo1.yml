@@ -25,8 +25,8 @@ jobs:
 
     - name: Build and push Docker image
       run: |
-        docker build -t acrskhan.azurecr.io/skhan-app:1.0 ./app1
-        docker push acrskhan.azurecr.io/skhan-app:1.0
+        docker build -t acrskhan.azurecr.io/skhan-app:2.0 ./app1
+        docker push acrskhan.azurecr.io/skhan-app:2.0
 
     - name: Set AKS context
       run: |
