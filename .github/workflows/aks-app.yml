@@ -10,7 +10,7 @@ env:
   ACR_NAME: acrskhan
   ACR_LOGIN_SERVER: acrskhan.azurecr.io
   IMAGE_NAME: skhan-app
-  AKS_CLUSTER: rg-skhan-aks
+  AKS_CLUSTER: skhanaks
   AKS_RG: rg-skhan-aks
   IMAGE_TAG: ${{ github.sha }}
 
