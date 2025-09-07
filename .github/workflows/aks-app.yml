@@ -21,7 +21,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # Azure CLI Login using service principal
+      # 🔑 Azure CLI Login using service principal
       - name: Azure CLI Login
         run: |
           echo '${{ secrets.AZURE_CREDENTIALS }}' > azure-credentials.json
@@ -51,31 +51,19 @@ jobs:
             --name ${{ env.AKS_CLUSTER }} \
             --overwrite-existing
 
-      - name: Install/upgrade NGINX Ingress Controller with Helm
+      # 📦 Install/upgrade NGINX Ingress Controller with Helm
+      - name: Install/upgrade NGINX Ingress Controller
         run: |
           helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
           helm repo update
           helm upgrade --install nginx-ingress ingress-nginx/ingress-nginx \
             --namespace ingress-nginx --create-namespace \
+            --set controller.service.externalTrafficPolicy=Local \
+            --set controller.service.annotations."service\.beta\.kubernetes\.io/azure-load-balancer-health-probe-request-path"="/healthz" \
+            --set controller.service.annotations."service\.beta\.kubernetes\.io/azure-load-balancer-health-probe-port"="10254" \
             --wait
 
-      # ✅ Fix Azure LB health probe for Ingress Controller
-      - name: Patch Ingress Controller Service for Azure LB
-        run: |
-          kubectl patch svc nginx-ingress-ingress-nginx-controller -n ingress-nginx \
-            --type merge -p '{
-              "metadata": {
-                "annotations": {
-                  "service.beta.kubernetes.io/azure-load-balancer-health-probe-port": "10254",
-                  "service.beta.kubernetes.io/azure-load-balancer-health-probe-request-path": "/healthz"
-                }
-              },
-              "spec": {
-                "externalTrafficPolicy": "Local"
-              }
-            }'
-
-      # ✅ Use fullchain cert (domain cert + CA bundle)
+      # 🔒 Create TLS secret with full chain
       - name: Create TLS secret from cert files
         run: |
           cat ./cert/skhan.tech.crt ./cert/ca_bundle.crt > ./cert/skhan.tech.fullchain.crt
@@ -102,7 +90,7 @@ jobs:
             --set tls.secretName=skhan-tls \
             --wait
 
-      # ✅ Wait for ingress IP assignment
+      # 🌐 Wait for ingress IP assignment
       - name: Wait for Ingress external IP
         run: |
           echo "Waiting for ingress external IP..."
@@ -117,7 +105,7 @@ jobs:
             sleep 20
           done
 
-      # ✅ Validate DNS & connectivity
+      # ✅ Validate DNS & TLS
       - name: Validate DNS and ingress response
         run: |
           nslookup skhan.tech || true
