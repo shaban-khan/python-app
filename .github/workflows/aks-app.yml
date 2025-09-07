@@ -75,10 +75,12 @@ jobs:
               }
             }'
 
+      # ✅ Use fullchain cert (domain cert + CA bundle)
       - name: Create TLS secret from cert files
         run: |
+          cat ./cert/skhan.tech.crt ./cert/ca_bundle.crt > ./cert/skhan.tech.fullchain.crt
           kubectl create secret tls skhan-tls \
-            --cert=./cert/skhan.tech.crt \
+            --cert=./cert/skhan.tech.fullchain.crt \
             --key=./cert/skhan.tech.key \
             -n default --dry-run=client -o yaml | kubectl apply -f -
 
@@ -119,4 +121,4 @@ jobs:
       - name: Validate DNS and ingress response
         run: |
           nslookup skhan.tech || true
-          curl -vkL http://skhan.tech || true
+          curl -vkL https://skhan.tech || true
