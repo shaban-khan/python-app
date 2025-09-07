@@ -173,10 +173,11 @@ openssl s_client -connect skhan.tech:443 -showcerts
 ### ✅ **Key Fixes Implemented During Troubleshooting**
 
 1. **Ingress Controller Health Probe**
-   '''
+
+   ```bash
    kubectl get deploy -n ingress-nginx -l app.kubernetes.io/component=controller \
-  -o jsonpath='{.items[0].spec.template.spec.containers[0].readinessProbe.httpGet.path}{"\n"}{.items[0].spec.template.spec.containers[0].readinessProbe.httpGet.port}{"\n"}'
-   '''
+     -o jsonpath='{.items[0].spec.template.spec.containers[0].readinessProbe.httpGet.path}{"\n"}{.items[0].spec.template.spec.containers[0].readinessProbe.httpGet.port}{"\n"}'
+   ```
    - Patched `externalTrafficPolicy: Local`
    - Correct path `/healthz` and port `10254` for Azure LB
 
