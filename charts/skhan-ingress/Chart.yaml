@@ -1,6 +1,5 @@
-apiVersion: v2
-name: skhan-ingress
-description: Ingress for skhan app (with TLS)
-type: application
-version: 0.1.0
-appVersion: "1.0"
+host: skhan.tech
+serviceName: default-skhan-svc-80
+servicePort: 80
+tls:
+  secretName: skhan-tls
