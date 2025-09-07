@@ -1,13 +1,14 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: skhan-ingress
+  name: {{ .Release.Name }}
+  namespace: {{ .Release.Namespace }}
   annotations:
-    kubernetes.io/ingress.class: "nginx"
+    kubernetes.io/ingress.class: nginx
 spec:
   tls:
   - hosts:
-    - {{ .Values.host }}
+      - {{ .Values.host }}
     secretName: {{ .Values.tls.secretName }}
   rules:
   - host: {{ .Values.host }}
@@ -20,4 +21,3 @@ spec:
             name: {{ .Values.serviceName }}
             port:
               number: {{ .Values.servicePort }}
-

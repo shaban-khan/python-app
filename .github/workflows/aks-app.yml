@@ -51,13 +51,13 @@ jobs:
             --name ${{ env.AKS_CLUSTER }} \
             --overwrite-existing
 
-      - name: Attach ACR to AKS (if not already)
-        run: az aks update -n ${{ env.AKS_CLUSTER }} -g ${{ env.AKS_RG }} --attach-acr ${{ env.ACR_NAME }} || true
+      # - name: Attach ACR to AKS (if not already)
+      #   run: az aks update -n ${{ env.AKS_CLUSTER }} -g ${{ env.AKS_RG }} --attach-acr ${{ env.ACR_NAME }} || true
 
-      - name: Install Helm
-        run: |
-          curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
-          helm version
+      # - name: Install Helm
+      #   run: |
+      #     curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+      #     helm version
 
       - name: Install/upgrade NGINX Ingress Controller with Helm
         run: |
