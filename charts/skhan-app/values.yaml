@@ -1,0 +1,13 @@
+replicaCount: 2
+
+image:
+  repository: acrskhan.azurecr.io/skhan-app
+  tag: "1.0"
+  pullPolicy: IfNotPresent
+
+service:
+  name: default-skhan-svc-80
+  type: ClusterIP
+  port: 80
+
+containerPort: 5000

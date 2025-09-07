@@ -1,62 +1,92 @@
-name: Deploy to AKS
+name: Build and Deploy to AKS
 
 on:
   push:
     branches:
       - main
-      - develop
+
+env:
+  ACR_NAME: acrskhan
+  ACR_LOGIN_SERVER: acrskhan.azurecr.io
+  IMAGE_NAME: skhan-app
+  AKS_CLUSTER: rg-skhan-aks
+  AKS_RG: rg-skhan-aks
+  IMAGE_TAG: ${{ github.sha }}
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
     steps:
-      # 1. Checkout the repository
-      - name: Checkout repository
-        uses: actions/checkout@v3
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      # 2. Azure login
-      - name: Azure Login
-        uses: azure/login@v1
+      # Azure CLI Login using service principal
+      - name: Azure CLI Login
+        run: |
+          echo '${{ secrets.AZURE_CREDENTIALS }}' > azure-credentials.json
+          CLIENT_ID=$(jq -r .clientId azure-credentials.json)
+          CLIENT_SECRET=$(jq -r .clientSecret azure-credentials.json)
+          TENANT_ID=$(jq -r .tenantId azure-credentials.json)
+          az login --service-principal -u $CLIENT_ID -p $CLIENT_SECRET --tenant $TENANT_ID
+          az account set --subscription $(jq -r .subscriptionId azure-credentials.json)
+
+      - name: Login to ACR
+        run: az acr login --name ${{ env.ACR_NAME }}
+
+      - name: Build and push image to ACR
+        uses: docker/build-push-action@v4
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          context: ./app1
+          file: ./app1/Dockerfile
+          push: true
+          tags: |
+            ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+            ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:latest
 
-      # 3. Get AKS credentials
-      - name: Get AKS credentials
+      - name: Configure kubectl context for AKS
         run: |
           az aks get-credentials \
-            --resource-group "rg-skhan-demo-aks" \
-            --name "skhanaks" \
-            --admin
+            --resource-group ${{ env.AKS_RG }} \
+            --name ${{ env.AKS_CLUSTER }} \
+            --overwrite-existing
 
-      # 4. Install NGINX Ingress Controller
-      - name: Install NGINX Ingress Controller
+      - name: Attach ACR to AKS (if not already)
+        run: az aks update -n ${{ env.AKS_CLUSTER }} -g ${{ env.AKS_RG }} --attach-acr ${{ env.ACR_NAME }} || true
+
+      - name: Install Helm
         run: |
-          kubectl create namespace ingress-nginx --dry-run=client -o yaml | kubectl apply -f -
+          curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+          helm version
+
+      - name: Install/upgrade NGINX Ingress Controller with Helm
+        run: |
           helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
           helm repo update
-          helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx \
-            --namespace ingress-nginx \
-            --set controller.replicaCount=2 \
-            --set controller.nodeSelector."kubernetes\.io/os"=linux \
-            --set defaultBackend.nodeSelector."kubernetes\.io/os"=linux \
-            --set controller.service.annotations."service\.beta\.kubernetes\.io/azure-load-balancer-health-probe-protocol"=tcp
+          helm upgrade --install nginx-ingress ingress-nginx/ingress-nginx \
+            --namespace ingress-nginx --create-namespace \
+            --wait
 
-      # 5. Create TLS Secret from certs directory
-      - name: Create TLS Secret
+      - name: Create TLS secret from cert files
         run: |
-          kubectl create secret tls skhan-tech-tls \
-            --cert=certs/skhan.tech.crt \
-            --key=certs/skhan.tech.key \
+          kubectl create secret tls skhan-tls \
+            --cert=./cert/skhan.tech.crt \
+            --key=./cert/skhan.tech.key \
+            -n default --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Deploy application (Deployment + Service) with Helm
+        run: |
+          helm upgrade --install skhan-app ./charts/skhan-app \
+            --namespace default --create-namespace \
+            --set image.repository=${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }} \
+            --set image.tag=${{ env.IMAGE_TAG }} \
+            --wait
+
+      - name: Deploy Ingress with Helm (Ingress + TLS)
+        run: |
+          helm upgrade --install skhan-ingress ./charts/skhan-ingress \
             --namespace default \
-            --dry-run=client -o yaml | kubectl apply -f -
-
-      # 6. Deploy Application (Deployment + Service)
-      - name: Deploy App
-        run: |
-          kubectl apply -f manifest/deploy-app.yaml
-          kubectl apply -f manifest/svc-app.yaml
-
-      # 7. Apply Ingress with TLS
-      - name: Apply Ingress
-        run: kubectl apply -f manifest/ingress.yaml
+            --set host=skhan.tech \
+            --set serviceName=default-skhan-svc-80 \
+            --set servicePort=80 \
+            --set tls.secretName=skhan-tls \
+            --wait

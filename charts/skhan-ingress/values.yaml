@@ -1,0 +1,5 @@
+host: skhan.tech
+serviceName: default-skhan-svc-80
+servicePort: 80
+tls:
+  secretName: skhan-tls
