@@ -51,14 +51,6 @@ jobs:
             --name ${{ env.AKS_CLUSTER }} \
             --overwrite-existing
 
-      # - name: Attach ACR to AKS (if not already)
-      #   run: az aks update -n ${{ env.AKS_CLUSTER }} -g ${{ env.AKS_RG }} --attach-acr ${{ env.ACR_NAME }} || true
-
-      # - name: Install Helm
-      #   run: |
-      #     curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
-      #     helm version
-
       - name: Install/upgrade NGINX Ingress Controller with Helm
         run: |
           helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
@@ -66,6 +58,22 @@ jobs:
           helm upgrade --install nginx-ingress ingress-nginx/ingress-nginx \
             --namespace ingress-nginx --create-namespace \
             --wait
+
+      # ✅ Fix Azure LB health probe for Ingress Controller
+      - name: Patch Ingress Controller Service for Azure LB
+        run: |
+          kubectl patch svc nginx-ingress-ingress-nginx-controller -n ingress-nginx \
+            --type merge -p '{
+              "metadata": {
+                "annotations": {
+                  "service.beta.kubernetes.io/azure-load-balancer-health-probe-port": "10254",
+                  "service.beta.kubernetes.io/azure-load-balancer-health-probe-request-path": "/healthz"
+                }
+              },
+              "spec": {
+                "externalTrafficPolicy": "Local"
+              }
+            }'
 
       - name: Create TLS secret from cert files
         run: |
@@ -91,3 +99,24 @@ jobs:
             --set servicePort=80 \
             --set tls.secretName=skhan-tls \
             --wait
+
+      # ✅ Wait for ingress IP assignment
+      - name: Wait for Ingress external IP
+        run: |
+          echo "Waiting for ingress external IP..."
+          for i in {1..30}; do
+            IP=$(kubectl get svc nginx-ingress-ingress-nginx-controller -n ingress-nginx -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+            if [ -n "$IP" ]; then
+              echo "Ingress IP: $IP"
+              echo "INGRESS_IP=$IP" >> $GITHUB_ENV
+              break
+            fi
+            echo "Still waiting... ($i/30)"
+            sleep 20
+          done
+
+      # ✅ Validate DNS & connectivity
+      - name: Validate DNS and ingress response
+        run: |
+          nslookup skhan.tech || true
+          curl -vkL http://skhan.tech || true
