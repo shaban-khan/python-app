@@ -1,0 +1,124 @@
+name: Build and Deploy to AKS
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+
+env:
+  ACR_NAME: acrskhan
+  ACR_LOGIN_SERVER: acrskhan.azurecr.io
+  IMAGE_NAME: skhan-app
+  AKS_CLUSTER: skhanaks
+  AKS_RG: rg-skhan-aks
+  IMAGE_TAG: ${{ github.sha }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Azure CLI Login using service principal
+      - name: Azure CLI Login
+        run: |
+          echo '${{ secrets.AZURE_CREDENTIALS }}' > azure-credentials.json
+          CLIENT_ID=$(jq -r .clientId azure-credentials.json)
+          CLIENT_SECRET=$(jq -r .clientSecret azure-credentials.json)
+          TENANT_ID=$(jq -r .tenantId azure-credentials.json)
+          az login --service-principal -u $CLIENT_ID -p $CLIENT_SECRET --tenant $TENANT_ID
+          az account set --subscription $(jq -r .subscriptionId azure-credentials.json)
+
+      - name: Login to ACR
+        run: az acr login --name ${{ env.ACR_NAME }}
+
+      - name: Build and push image to ACR
+        uses: docker/build-push-action@v4
+        with:
+          context: ./app1
+          file: ./app1/Dockerfile
+          push: true
+          tags: |
+            ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+            ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:latest
+
+      - name: Configure kubectl context for AKS
+        run: |
+          az aks get-credentials \
+            --resource-group ${{ env.AKS_RG }} \
+            --name ${{ env.AKS_CLUSTER }} \
+            --overwrite-existing
+
+      - name: Install/upgrade NGINX Ingress Controller with Helm
+        run: |
+          helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+          helm repo update
+          helm upgrade --install nginx-ingress ingress-nginx/ingress-nginx \
+            --namespace ingress-nginx --create-namespace \
+            --wait
+
+      # ✅ Fix Azure LB health probe for Ingress Controller
+      - name: Patch Ingress Controller Service for Azure LB
+        run: |
+          kubectl patch svc nginx-ingress-ingress-nginx-controller -n ingress-nginx \
+            --type merge -p '{
+              "metadata": {
+                "annotations": {
+                  "service.beta.kubernetes.io/azure-load-balancer-health-probe-port": "10254",
+                  "service.beta.kubernetes.io/azure-load-balancer-health-probe-request-path": "/healthz"
+                }
+              },
+              "spec": {
+                "externalTrafficPolicy": "Local"
+              }
+            }'
+
+      # ✅ Use fullchain cert (domain cert + CA bundle)
+      - name: Create TLS secret from cert files
+        run: |
+          cat ./cert/skhan.tech.crt ./cert/ca_bundle.crt > ./cert/skhan.tech.fullchain.crt
+          kubectl create secret tls skhan-tls \
+            --cert=./cert/skhan.tech.fullchain.crt \
+            --key=./cert/skhan.tech.key \
+            -n default --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Deploy application (Deployment + Service) with Helm
+        run: |
+          helm upgrade --install skhan-app ./charts/skhan-app \
+            --namespace default --create-namespace \
+            --set image.repository=${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }} \
+            --set image.tag=${{ env.IMAGE_TAG }} \
+            --wait
+
+      - name: Deploy Ingress with Helm (Ingress + TLS)
+        run: |
+          helm upgrade --install skhan-ingress ./charts/skhan-ingress \
+            --namespace default \
+            --set host=skhan.tech \
+            --set serviceName=default-skhan-svc-80 \
+            --set servicePort=80 \
+            --set tls.secretName=skhan-tls \
+            --wait
+
+      # ✅ Wait for ingress IP assignment
+      - name: Wait for Ingress external IP
+        run: |
+          echo "Waiting for ingress external IP..."
+          for i in {1..30}; do
+            IP=$(kubectl get svc nginx-ingress-ingress-nginx-controller -n ingress-nginx -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+            if [ -n "$IP" ]; then
+              echo "Ingress IP: $IP"
+              echo "INGRESS_IP=$IP" >> $GITHUB_ENV
+              break
+            fi
+            echo "Still waiting... ($i/30)"
+            sleep 20
+          done
+
+      # ✅ Validate DNS & connectivity
+      - name: Validate DNS and ingress response
+        run: |
+          nslookup skhan.tech || true
+          curl -vkL https://skhan.tech || true
