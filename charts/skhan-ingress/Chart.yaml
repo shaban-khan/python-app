@@ -1,5 +1,6 @@
-host: skhan.tech
-serviceName: default-skhan-svc-80
-servicePort: 80
-tls:
-  secretName: skhan-tls
+apiVersion: v2
+name: skhan-ingress        # 👈 REQUIRED
+description: Helm chart for Ingress of skhan.tech
+type: application
+version: 0.1.0
+appVersion: "1.0"
