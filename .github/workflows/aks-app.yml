@@ -59,7 +59,7 @@ jobs:
             --namespace ingress-nginx --create-namespace \
             --wait
 
-      # Patch Azure LB probe for Ingress Controller
+      # ✅ Fix Azure LB health probe for Ingress Controller
       - name: Patch Ingress Controller Service for Azure LB
         run: |
           kubectl patch svc nginx-ingress-ingress-nginx-controller -n ingress-nginx \
@@ -75,17 +75,16 @@ jobs:
               }
             }'
 
-      # Create TLS secret with full chain (cert + CA bundle)
-      - name: Create TLS secret for Ingress
+      # ✅ Use fullchain cert (domain cert + CA bundle)
+      - name: Create TLS secret from cert files
         run: |
-          cat ./cert/skhan.tech.crt ./cert/ca_bundle.crt > fullchain.crt
+          cat ./cert/skhan.tech.crt ./cert/ca_bundle.crt > ./cert/skhan.tech.fullchain.crt
           kubectl create secret tls skhan-tls \
-            --cert=fullchain.crt \
+            --cert=./cert/skhan.tech.fullchain.crt \
             --key=./cert/skhan.tech.key \
             -n default --dry-run=client -o yaml | kubectl apply -f -
 
-      # Deploy application (Deployment + Service) with Helm
-      - name: Deploy application Helm chart
+      - name: Deploy application (Deployment + Service) with Helm
         run: |
           helm upgrade --install skhan-app ./charts/skhan-app \
             --namespace default --create-namespace \
@@ -93,8 +92,7 @@ jobs:
             --set image.tag=${{ env.IMAGE_TAG }} \
             --wait
 
-      # Deploy ingress using fixed Helm chart
-      - name: Deploy Ingress Helm chart
+      - name: Deploy Ingress with Helm (Ingress + TLS)
         run: |
           helm upgrade --install skhan-ingress ./charts/skhan-ingress \
             --namespace default \
@@ -104,7 +102,7 @@ jobs:
             --set tls.secretName=skhan-tls \
             --wait
 
-      # Wait for ingress external IP
+      # ✅ Wait for ingress IP assignment
       - name: Wait for Ingress external IP
         run: |
           echo "Waiting for ingress external IP..."
@@ -119,7 +117,7 @@ jobs:
             sleep 20
           done
 
-      # Validate DNS and HTTPS connectivity
+      # ✅ Validate DNS & connectivity
       - name: Validate DNS and ingress response
         run: |
           nslookup skhan.tech || true
