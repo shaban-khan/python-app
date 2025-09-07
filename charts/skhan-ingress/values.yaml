@@ -1,15 +1,6 @@
 host: skhan.tech
-
 serviceName: default-skhan-svc-80
 servicePort: 80
-
 tls:
   enabled: true
   secretName: skhan-tls
-
-controller:
-  service:
-    annotations:
-      service.beta.kubernetes.io/azure-load-balancer-health-probe-port: "10254"
-      service.beta.kubernetes.io/azure-load-balancer-health-probe-request-path: "/healthz"
-    externalTrafficPolicy: Local

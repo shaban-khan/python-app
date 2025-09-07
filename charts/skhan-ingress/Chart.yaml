@@ -1,6 +1,6 @@
 apiVersion: v2
-name: skhan-ingress        # 👈 REQUIRED
-description: Helm chart for Ingress of skhan.tech
+name: skhan-ingress
+description: Helm chart for SKHAN Ingress
 type: application
 version: 0.1.0
-appVersion: "1.0"
+appVersion: "1.0.0"
