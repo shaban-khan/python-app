@@ -177,13 +177,24 @@ openssl s_client -connect skhan.tech:443 -showcerts
    ```bash
    kubectl get deploy -n ingress-nginx -l app.kubernetes.io/component=controller \
    -o jsonpath='{.items[0].spec.template.spec.containers[0].readinessProbe.httpGet.path}{"\n"}{.items[0].spec.template.spec.containers[0].readinessProbe.httpGet.port}{"\n"}'
+   
+   Expected utput:
+   /healthz
+   10254
    ```
    - Patched `externalTrafficPolicy: Local`
    - Correct path `/healthz` and port `10254` for Azure LB
 
-2. **TLS Certificate**
-   - Combined `skhan.tech.crt` + `ca_bundle.crt` into `fullchain.crt` for secret
-   - Prevented `curl` SSL verification errors
+2. **Verify LB annotations**
+
+   ```bash
+   kubectl get svc nginx-ingress-ingress-nginx-controller -n ingress-nginx -o yaml | grep service.beta.kubernetes.io/azure-load-balancer-health-probe
+   ```
+   **Output:**
+   ```
+   service.beta.kubernetes.io/azure-load-balancer-health-probe-port: "10254"
+   service.beta.kubernetes.io/azure-load-balancer-health-probe-request-path: /healthz
+   ```
 
 3. **Ingress & Helm Chart**
    - Updated `values.yaml` and `ingress.yaml` to include proper `_helpers.tpl` references

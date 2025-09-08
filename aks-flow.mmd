@@ -1,0 +1,16 @@
+flowchart LR
+  Internet(("Internet\nclient")) -->|HTTPS/HTTP to 20.15.29.122| PublicIP[/"Public IP\n20.15.29.122"/]
+  PublicIP --> LB["Azure Standard Load Balancer\n(name: kubernetes)"]
+  LB -->|Rule TCP 80 → backendPool:kubernetes (frontendPort 80)| BackendPool["Backend pool: kubernetes\n(AKS node NICs in VMSS)"]
+  LB -->|Rule TCP 443 → backendPool:kubernetes (frontendPort 443)| BackendPool
+  LB -. HealthProbe .-> Probe["HTTP probe: /healthz on port 31012\n(interval 5s, threshold 2)"]
+  BackendPool --> VMSS["VM Scale Set\naks-agentpool-89654625-vmss"]
+  VMSS --> Node["Kube node: aks-agentpool-89654625-vmss000000\n(internal IP 10.224.0.4)"]
+  Node -->|NodePort 30542 -> port 80| IngressSvc["Service: nginx-ingress-ingress-nginx-controller\ntype: LoadBalancer\nexternalTrafficPolicy: Local"]
+  Node -->|NodePort 31679 -> port 443| IngressSvc
+  Node -->|Health NodePort 31012| IngressSvc
+  IngressSvc --> IngressPod["Pod: nginx-ingress-ingress-nginx-controller-55cc88c65d-7bp8x\n(pod IP 10.224.0.43)"]
+  IngressPod --> AppPods["App service → app pods"]
+  subgraph Diagnostics
+    LB -->|LoadBalancerHealthEvent -> Log Analytics| LogAnalytics[/"Log Analytics\n(DefaultWorkspace-...-EUS2)"/]
+  end
